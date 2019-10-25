@@ -1,4 +1,6 @@
 {
+  "name": "licheng-cloud-client",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "umi dev",

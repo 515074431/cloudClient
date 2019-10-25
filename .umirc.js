@@ -56,4 +56,7 @@ export default {
     ],
   ],
   publicPath: './',
+  base: '/',
+  history: 'hash',
 };
+
