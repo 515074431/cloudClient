@@ -4,7 +4,7 @@ export default {
   routes: [
     {
       path: '/',
-      component: '../layouts/index',
+      component: '../layouts/LayoutSide/index',
       routes: [
         {
           name: '查询表格',
