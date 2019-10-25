@@ -8,7 +8,7 @@
 /package-lock.json
 
 # ide
-./idea
+.idea
 
 # production
 /dist
@@ -22,3 +22,6 @@
 # umi
 .umi
 .umi-production
+
+# build client
+/buildClient
