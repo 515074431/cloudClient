@@ -25,9 +25,9 @@ class UpdateForm extends Component {
     super(props);
     this.state = {
       formVals: {
-        name: props.values.name,
-        desc: props.values.desc,
-        key: props.values.key,
+        name: props.values && props.values.name,
+        desc: props.values && props.values.desc,
+        key: props.values && props.values.key,
         target: '0',
         template: '0',
         type: '1',

@@ -2,19 +2,25 @@
 export default {
   treeShaking: true,
   routes: [
+    // user
+    {
+      name: '登录页',
+      path: '/userlogin',
+      component: '../layouts/LayoutSide/index',
+      routes: [
+        { path: '/userlogin', component: './UserLogin' },
+      ],
+    },
+    // app
     {
       path: '/',
       component: '../layouts/LayoutSide/index',
+      authority: ['admin', 'user'],
       routes: [
         {
           name: '查询表格',
           path: '/listtablelist',
           component: './ListTableList',
-        },
-        {
-          name: '登录页',
-          path: '/userlogin',
-          component: './UserLogin',
         },
         {
           name: '个人设置',

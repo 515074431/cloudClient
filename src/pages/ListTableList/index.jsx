@@ -2,8 +2,8 @@ import {
   Badge,
   Button,
   Card,
-  Col,
-  DatePicker,
+  List,
+  Collapse,
   Divider,
   Dropdown,
   Form,
@@ -11,20 +11,25 @@ import {
   Input,
   InputNumber,
   Menu,
-  Row,
+  Avatar,
   Select,
   message,
+  Tree,
 } from 'antd';
 import React, { Component, Fragment } from 'react';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
 import { connect } from 'dva';
 import moment from 'moment';
 import CreateForm from './components/CreateForm';
-import StandardTable from './components/StandardTable';
-import UpdateForm from './components/UpdateForm';
+import FolderTree from './components/FolderTree';
 import styles from './style.less';
+
+const TreeNode = Tree.TreeNode;
+//在渲染器进程 (网页) 中。
+const ipcRenderer = window.require('electron').ipcRenderer;
 const FormItem = Form.Item;
 const { Option } = Select;
+const { Panel } = Collapse;
 
 const getValue = obj =>
   Object.keys(obj)
@@ -36,7 +41,7 @@ const status = ['关闭', '运行中', '已上线', '异常'];
 
 /* eslint react/no-multi-comp:0 */
 @connect(({ listTableList, loading }) => ({
-  listTableList,
+  list: listTableList.data,
   loading: loading.models.listTableList,
 }))
 class TableList extends Component {
@@ -47,6 +52,12 @@ class TableList extends Component {
     selectedRows: [],
     formValues: {},
     stepFormValues: {},
+    list: [
+      { name: 'haha' },
+      { name: 'bbbbb' },
+      { name: 'cccc' },
+      { name: 'ddddd' },
+    ],
   };
   columns = [
     {
@@ -89,7 +100,7 @@ class TableList extends Component {
       ],
 
       render(val) {
-        return <Badge status={statusMap[val]} text={status[val]} />;
+        return <Badge status={statusMap[val]} text={status[val]}/>;
       },
     },
     {
@@ -103,12 +114,13 @@ class TableList extends Component {
       render: (text, record) => (
         <Fragment>
           <a onClick={() => this.handleUpdateModalVisible(true, record)}>配置</a>
-          <Divider type="vertical" />
+          <Divider type="vertical"/>
           <a href="">订阅警报</a>
         </Fragment>
       ),
     },
   ];
+
 
   componentDidMount() {
     const { dispatch } = this.props;
@@ -117,385 +129,113 @@ class TableList extends Component {
     });
   }
 
-  handleStandardTableChange = (pagination, filtersArg, sorter) => {
+  handleMenuClick = (type,item) => {
+    console.log(type,item)
     const { dispatch } = this.props;
-    const { formValues } = this.state;
-    const filters = Object.keys(filtersArg).reduce((obj, key) => {
-      const newObj = { ...obj };
-      newObj[key] = getValue(filtersArg[key]);
-      return newObj;
-    }, {});
-    const params = {
-      currentPage: pagination.current,
-      pageSize: pagination.pageSize,
-      ...formValues,
-      ...filters,
-    };
-
-    if (sorter.field) {
-      params.sorter = `${sorter.field}_${sorter.order}`;
-    }
-
-    dispatch({
-      type: 'listTableList/fetch',
-      payload: params,
-    });
-  };
-  handleFormReset = () => {
-    const { form, dispatch } = this.props;
-    form.resetFields();
-    this.setState({
-      formValues: {},
-    });
-    dispatch({
-      type: 'listTableList/fetch',
-      payload: {},
-    });
-  };
-  toggleForm = () => {
-    const { expandForm } = this.state;
-    this.setState({
-      expandForm: !expandForm,
-    });
-  };
-  handleMenuClick = e => {
-    const { dispatch } = this.props;
-    const { selectedRows } = this.state;
-    if (!selectedRows) return;
-
-    switch (e.key) {
+    switch (type) {
       case 'remove':
         dispatch({
           type: 'listTableList/remove',
-          payload: {
-            key: selectedRows.map(row => row.key),
-          },
-          callback: () => {
-            this.setState({
-              selectedRows: [],
-            });
-          },
+          payload: item
         });
         break;
-
-      default:
+      case 'startSync':
+        dispatch({
+          type: 'listTableList/update',
+          payload: {...item,check:true}
+        });
+        break;
+      case 'stopSync':
+        dispatch({
+          type: 'listTableList/update',
+          payload: {...item,check:false}
+        });
         break;
     }
-  };
-  handleSelectRows = rows => {
-    this.setState({
-      selectedRows: rows,
-    });
-  };
-  handleSearch = e => {
-    e.preventDefault();
-    const { dispatch, form } = this.props;
-    form.validateFields((err, fieldsValue) => {
-      if (err) return;
-      const values = {
-        ...fieldsValue,
-        updatedAt: fieldsValue.updatedAt && fieldsValue.updatedAt.valueOf(),
-      };
-      this.setState({
-        formValues: values,
-      });
-      dispatch({
-        type: 'listTableList/fetch',
-        payload: values,
-      });
-    });
   };
   handleModalVisible = flag => {
     this.setState({
       modalVisible: !!flag,
     });
   };
-  handleUpdateModalVisible = (flag, record) => {
-    this.setState({
-      updateModalVisible: !!flag,
-      stepFormValues: record || {},
-    });
-  };
   handleAdd = fields => {
+    //ipcRenderer.sendSync('storage_add_check_path',fields)
     const { dispatch } = this.props;
     dispatch({
       type: 'listTableList/add',
-      payload: {
-        desc: fields.desc,
-      },
+      payload: fields,
     });
     message.success('添加成功');
     this.handleModalVisible();
   };
-  handleUpdate = fields => {
-    const { dispatch } = this.props;
-    dispatch({
-      type: 'listTableList/update',
-      payload: {
-        name: fields.name,
-        desc: fields.desc,
-        key: fields.key,
-      },
-    });
-    message.success('配置成功');
-    this.handleUpdateModalVisible();
-  };
-
-  renderSimpleForm() {
-    const { form } = this.props;
-    const { getFieldDecorator } = form;
-    return (
-      <Form onSubmit={this.handleSearch} layout="inline">
-        <Row
-          gutter={{
-            md: 8,
-            lg: 24,
-            xl: 48,
-          }}
-        >
-          <Col md={8} sm={24}>
-            <FormItem label="规则名称">
-              {getFieldDecorator('name')(<Input placeholder="请输入" />)}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status')(
-                <Select
-                  placeholder="请选择"
-                  style={{
-                    width: '100%',
-                  }}
-                >
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>,
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <span className={styles.submitButtons}>
-              <Button type="primary" htmlType="submit">
-                查询
-              </Button>
-              <Button
-                style={{
-                  marginLeft: 8,
-                }}
-                onClick={this.handleFormReset}
-              >
-                重置
-              </Button>
-              <a
-                style={{
-                  marginLeft: 8,
-                }}
-                onClick={this.toggleForm}
-              >
-                展开 <Icon type="down" />
-              </a>
-            </span>
-          </Col>
-        </Row>
-      </Form>
-    );
-  }
-
-  renderAdvancedForm() {
-    const {
-      form: { getFieldDecorator },
-    } = this.props;
-    return (
-      <Form onSubmit={this.handleSearch} layout="inline">
-        <Row
-          gutter={{
-            md: 8,
-            lg: 24,
-            xl: 48,
-          }}
-        >
-          <Col md={8} sm={24}>
-            <FormItem label="规则名称">
-              {getFieldDecorator('name')(<Input placeholder="请输入" />)}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status')(
-                <Select
-                  placeholder="请选择"
-                  style={{
-                    width: '100%',
-                  }}
-                >
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>,
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="调用次数">
-              {getFieldDecorator('number')(
-                <InputNumber
-                  style={{
-                    width: '100%',
-                  }}
-                />,
-              )}
-            </FormItem>
-          </Col>
-        </Row>
-        <Row
-          gutter={{
-            md: 8,
-            lg: 24,
-            xl: 48,
-          }}
-        >
-          <Col md={8} sm={24}>
-            <FormItem label="更新日期">
-              {getFieldDecorator('date')(
-                <DatePicker
-                  style={{
-                    width: '100%',
-                  }}
-                  placeholder="请输入更新日期"
-                />,
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status3')(
-                <Select
-                  placeholder="请选择"
-                  style={{
-                    width: '100%',
-                  }}
-                >
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>,
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status4')(
-                <Select
-                  placeholder="请选择"
-                  style={{
-                    width: '100%',
-                  }}
-                >
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>,
-              )}
-            </FormItem>
-          </Col>
-        </Row>
-        <div
-          style={{
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              float: 'right',
-              marginBottom: 24,
-            }}
-          >
-            <Button type="primary" htmlType="submit">
-              查询
-            </Button>
-            <Button
-              style={{
-                marginLeft: 8,
-              }}
-              onClick={this.handleFormReset}
-            >
-              重置
-            </Button>
-            <a
-              style={{
-                marginLeft: 8,
-              }}
-              onClick={this.toggleForm}
-            >
-              收起 <Icon type="up" />
-            </a>
-          </div>
-        </div>
-      </Form>
-    );
-  }
-
-  renderForm() {
-    const { expandForm } = this.state;
-    return expandForm ? this.renderAdvancedForm() : this.renderSimpleForm();
-  }
 
   render() {
     const {
-      listTableList: { data },
+      list,
       loading,
     } = this.props;
-    const { selectedRows, modalVisible, updateModalVisible, stepFormValues } = this.state;
-    const menu = (
-      <Menu onClick={this.handleMenuClick} selectedKeys={[]}>
-        <Menu.Item key="remove">删除</Menu.Item>
-        <Menu.Item key="approval">批量审批</Menu.Item>
+    console.log(list);
+    const { selectedRows, modalVisible } = this.state;
+    const menu = (item)=> (
+      <Menu>
+        {item.check || <Menu.Item key="startSync"  onClick={()=>this.handleMenuClick('startSync',item)}>开始同步</Menu.Item>}
+        {item.check && <Menu.Item key="stopSync"  onClick={()=>this.handleMenuClick('stopSync',item)}>停止同步</Menu.Item>}
+        <Menu.Item key="remove"  onClick={()=>this.handleMenuClick('remove',item)}>删除</Menu.Item>
       </Menu>
     );
+    const header = (item)=>(
+      <Card bordered={false}>
+        <Card.Meta
+          avatar={<Avatar style={{ backgroundColor: '#1890FF' }} icon="folder"/>}
+          title={item.remotePath}
+          description={item.localPath}
+        />
+      </Card>
+    )
+    const extra = (item)=>(
+      <div onClick={e=>e.stopPropagation()}>
+        <Dropdown overlay={menu(item)}><Icon
+          type="setting"
+          style={{
+            position: 'absolute',
+            right: '20px',
+            top: '50%',
+            marginTop: '-11px',
+          }}
+          onClick={event => {
+            // If you don't want click extra trigger collapse, you can prevent this:
+            event.stopPropagation();
+          }}
+        /></Dropdown>
+      </div>
+    )
     const parentMethods = {
       handleAdd: this.handleAdd,
       handleModalVisible: this.handleModalVisible,
     };
-    const updateMethods = {
-      handleUpdateModalVisible: this.handleUpdateModalVisible,
-      handleUpdate: this.handleUpdate,
-    };
     return (
-      <PageHeaderWrapper>
+      <div>
         <Card bordered={false}>
           <div className={styles.tableList}>
-            <div className={styles.tableListForm}>{this.renderForm()}</div>
             <div className={styles.tableListOperator}>
               <Button icon="plus" type="primary" onClick={() => this.handleModalVisible(true)}>
-                新建
+                添加同步文件夹
               </Button>
-              {selectedRows.length > 0 && (
-                <span>
-                  <Button>批量操作</Button>
-                  <Dropdown overlay={menu}>
-                    <Button>
-                      更多操作 <Icon type="down" />
-                    </Button>
-                  </Dropdown>
-                </span>
-              )}
+
             </div>
-            <StandardTable
-              selectedRows={selectedRows}
-              loading={loading}
-              data={data}
-              columns={this.columns}
-              onSelectRow={this.handleSelectRows}
-              onChange={this.handleStandardTableChange}
-            />
+            <Collapse bordered={false}>
+              {list && list.map(item => {
+                return (<Panel header={header(item)} key={item.remotePath + item.localPath} extra={extra(item)}>
+
+                  <FolderTree remotePath={item.remotePath} localPath={item.localPath}/>
+                </Panel>);
+              })}
+            </Collapse>
           </div>
         </Card>
-        <CreateForm {...parentMethods} modalVisible={modalVisible} />
-        {stepFormValues && Object.keys(stepFormValues).length ? (
-          <UpdateForm
-            {...updateMethods}
-            updateModalVisible={updateModalVisible}
-            values={stepFormValues}
-          />
-        ) : null}
-      </PageHeaderWrapper>
+        <CreateForm {...parentMethods} modalVisible={modalVisible}/>
+
+      </div>
     );
   }
 }

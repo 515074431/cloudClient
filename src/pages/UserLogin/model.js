@@ -1,6 +1,9 @@
 import { routerRedux } from 'dva/router';
+import { stringify } from 'qs';
 import { fakeAccountLogin, getFakeCaptcha } from './service';
-import { getPageQuery, setAuthority } from './utils/utils';
+import { getPageQuery, setAuthority,getAuthority } from './utils/utils';
+//在渲染器进程 (网页) 中。
+const ipcRenderer = window.require('electron').ipcRenderer;
 
 const Model = {
   namespace: 'userLogin',
@@ -10,12 +13,24 @@ const Model = {
   effects: {
     *login({ payload }, { call, put }) {
       const response = yield call(fakeAccountLogin, payload);
-      yield put({
-        type: 'changeLoginStatus',
-        payload: response,
-      }); // Login successfully
+      console.log('-----response----',response)
+      if(response.status){//登录成功
+        console.log(ipcRenderer.sendSync('login_sucess', {...payload,...response.data})) // prints "pong"
 
-      if (response.status === 'ok') {
+        ipcRenderer.on('userInfoWrited', (event, arg) => {
+          console.log('返回的信息',arg) // prints "pong"
+        })
+        ipcRenderer.send('asynchronous-message', 'ping')
+      }
+
+      if (response.status) {
+        yield put({
+          type: 'changeLoginStatus',
+          payload: response,
+        }); // Login successfully
+
+        localStorage.setItem('token', response.data.token) // 这里设置token
+        //reloadAuthorized();
         const urlParams = new URL(window.location.href);
         const params = getPageQuery();
         let { redirect } = params;
@@ -34,20 +49,44 @@ const Model = {
             return;
           }
         }
-
-        yield put(routerRedux.replace(redirect || '/'));
+        console.log(redirect)
+        //yield put(routerRedux.replace(redirect || '/'));
+        yield put(routerRedux.replace(redirect || '/listtablelist'));
       }
     },
 
     *getCaptcha({ payload }, { call }) {
       yield call(getFakeCaptcha, payload);
     },
+
+    *logout(_, { put }) {
+      yield put({
+        type: 'changeLoginStatus',
+        payload: {
+          status: false,
+          data: {
+            currentAuthority: 'guest',
+          }
+        },
+      });
+      setAuthority('guest');
+      localStorage.removeItem('token');// 删除token
+      yield put(
+        routerRedux.push({
+          pathname: '/userlogin',
+          search: stringify({
+            type:'',
+            redirect: window.location.href,
+          }),
+        })
+      );
+    },
   },
   reducers: {
     changeLoginStatus(state, { payload }) {
-      setAuthority(payload.currentAuthority);
-      return { ...state, status: payload.status, type: payload.type };
-    },
+      setAuthority(payload.data.currentAuthority);
+      return { ...state, status: payload.status }
+    }
   },
 };
 export default Model;

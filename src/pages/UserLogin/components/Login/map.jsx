@@ -16,6 +16,20 @@ export default {
       },
     ],
   },
+  BaseUrl: {
+    props: {
+      size: 'large',
+      id: 'baseUrl',
+      prefix: <Icon type="link" className={styles.prefixIcon} />,
+      placeholder: 'baseUrl',
+    },
+    rules: [
+      {
+        required: true,
+        message: 'Please enter baseUrl!',
+      },
+    ],
+  },
   Password: {
     props: {
       size: 'large',

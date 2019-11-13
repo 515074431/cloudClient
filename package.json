@@ -27,13 +27,10 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "redux": "^4.0.4",
-    "umi-request": "^1.2.8",
-    "webdav": "^2.10.0"
+    "umi-request": "^1.2.8"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
     "babel-eslint": "^9.0.0",
-    "babel-preset-env": "^1.7.0",
     "electron": "^7.0.0",
     "electron-builder": "^21.2.0",
     "eslint": "^5.4.0",

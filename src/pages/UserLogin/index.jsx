@@ -1,11 +1,11 @@
-import { Alert, Checkbox, Icon } from 'antd';
+import { Alert, Checkbox } from 'antd';
 import { FormattedMessage, formatMessage } from 'umi-plugin-react/locale';
 import React, { Component } from 'react';
-import Link from 'umi/link';
+
 import { connect } from 'dva';
 import LoginComponents from './components/Login';
 import styles from './style.less';
-const { Tab, UserName, Password, Mobile, Captcha, Submit } = LoginComponents;
+const { Tab, UserName, Password,  Submit, BaseUrl } = LoginComponents;
 
 @connect(({ userLogin, loading }) => ({
   userLogin,
@@ -97,16 +97,26 @@ class UserLogin extends Component {
                   id: 'userlogin.login.message-invalid-credentials',
                 }),
               )}
+            <BaseUrl
+              name="baseurl"
+              placeholder={`${formatMessage({ id: 'userlogin.login.baseurl' })}: http://localhost:8080`}
+              rules={[
+                {
+                  required: true,
+                  message: formatMessage({ id: 'userlogin.baseurl.required' }),
+                },
+              ]}
+            />
             <UserName
-              name="userName"
+              name="username"
               placeholder={`${formatMessage({
-                id: 'userlogin.login.userName',
+                id: 'userlogin.login.username',
               })}: admin or user`}
               rules={[
                 {
                   required: true,
                   message: formatMessage({
-                    id: 'userlogin.userName.required',
+                    id: 'userlogin.username.required',
                   }),
                 },
               ]}
@@ -130,63 +140,6 @@ class UserLogin extends Component {
               }}
             />
           </Tab>
-          <Tab
-            key="mobile"
-            tab={formatMessage({
-              id: 'userlogin.login.tab-login-mobile',
-            })}
-          >
-            {status === 'error' &&
-              loginType === 'mobile' &&
-              !submitting &&
-              this.renderMessage(
-                formatMessage({
-                  id: 'userlogin.login.message-invalid-verification-code',
-                }),
-              )}
-            <Mobile
-              name="mobile"
-              placeholder={formatMessage({
-                id: 'userlogin.phone-number.placeholder',
-              })}
-              rules={[
-                {
-                  required: true,
-                  message: formatMessage({
-                    id: 'userlogin.phone-number.required',
-                  }),
-                },
-                {
-                  pattern: /^1\d{10}$/,
-                  message: formatMessage({
-                    id: 'userlogin.phone-number.wrong-format',
-                  }),
-                },
-              ]}
-            />
-            <Captcha
-              name="captcha"
-              placeholder={formatMessage({
-                id: 'userlogin.verification-code.placeholder',
-              })}
-              countDown={120}
-              onGetCaptcha={this.onGetCaptcha}
-              getCaptchaButtonText={formatMessage({
-                id: 'userlogin.form.get-captcha',
-              })}
-              getCaptchaSecondText={formatMessage({
-                id: 'userlogin.captcha.second',
-              })}
-              rules={[
-                {
-                  required: true,
-                  message: formatMessage({
-                    id: 'userlogin.verification-code.required',
-                  }),
-                },
-              ]}
-            />
-          </Tab>
           <div>
             <Checkbox checked={autoLogin} onChange={this.changeAutoLogin}>
               <FormattedMessage id="userlogin.login.remember-me" />
@@ -203,15 +156,6 @@ class UserLogin extends Component {
           <Submit loading={submitting}>
             <FormattedMessage id="userlogin.login.login" />
           </Submit>
-          <div className={styles.other}>
-            <FormattedMessage id="userlogin.login.sign-in-with" />
-            <Icon type="alipay-circle" className={styles.icon} theme="outlined" />
-            <Icon type="taobao-circle" className={styles.icon} theme="outlined" />
-            <Icon type="weibo-circle" className={styles.icon} theme="outlined" />
-            <Link className={styles.register} to="/user/register">
-              <FormattedMessage id="userlogin.login.signup" />
-            </Link>
-          </div>
         </LoginComponents>
       </div>
     );
