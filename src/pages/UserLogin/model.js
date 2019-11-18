@@ -18,9 +18,8 @@ const Model = {
         console.log(ipcRenderer.sendSync('login_sucess', {...payload,...response.data})) // prints "pong"
 
         ipcRenderer.on('userInfoWrited', (event, arg) => {
-          console.log('返回的信息',arg) // prints "pong"
+          console.log('返回的信息',arg)
         })
-        ipcRenderer.send('asynchronous-message', 'ping')
       }
 
       if (response.status) {

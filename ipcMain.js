@@ -2,7 +2,11 @@ const { ipcMain } = require('electron');
 const storage = require('./storage');
 const filePath = require('path');
 const webDav = require('licheng-webdav');
+const  request = require("request");
+const util = require('util')
 let checkingFiles = require('./checkingFiles')
+
+
 
 let dataPath = filePath.join(__dirname, 'data');
 storage.setDataPath(dataPath);
@@ -16,6 +20,33 @@ let createWebDavClient= async function(userInfo) {
     },
   });
 }
+
+let refreshToken =  async function(){
+  console.log('aaaaaaaaa')
+  let userInfo = await storage.get('userInfo', { dataPath: dataPath });
+  let post = util.promisify(request.post)
+
+  // let result =  await post({
+  //   //url: 'http://localhost:8080/api/v1/account',//userInfo.remoteUrl + '/api/v1/account',
+  //   method: 'POST',
+  //   //hostname:'localhost:8080',
+  //   protocol:'http:',
+  //   host: 'localhost',
+  //   port:8080,
+  //   path: '/api/v1/account',
+  //   data: {username:userInfo.username,password:userInfo.password},
+  // });
+  let result = await post('http://localhost:8080/api/v1/account',{json:true,body:{username:userInfo.username,password:userInfo.password}})
+
+  //console.log('重新获得的登录信息',Object.keys(result.body.data))
+  if(result.body.status){
+    userInfo.token = result.body.data.token
+    await storage.set('userInfo', userInfo, { dataPath: dataPath });
+  }
+  return result.body
+}
+
+
 module.exports = () => {
   //登录成功
   let login_sucess = async (event, args) => {
@@ -49,13 +80,35 @@ module.exports = () => {
     let reqestPath = url == '/'? userInfo.remotePath : url
     let webDavClient = await createWebDavClient(userInfo);
     let result
-    if(url == '/'){
-       result = await webDavClient.getDirectoryContents(userInfo.remotePath, { deep: 0, filterSelf: false });
-      //  let root = result.shift()
-      // root.children = result
-      // result =  [root]
-    }else{
-      result =  await webDavClient.getDirectoryContents(url, { deep: 1 });
+    try {
+      if (url == '/') {
+        result = await webDavClient.getDirectoryContents(userInfo.remotePath, { deep: 0, filterSelf: false });
+        //  let root = result.shift()
+        // root.children = result
+        // result =  [root]
+      } else {
+        result = await webDavClient.getDirectoryContents(url, { deep: 1 });
+      }
+    }catch (e) {
+      if(e.response.status == 401){
+        let login = await refreshToken()
+
+        if(login.status){//登录成功
+          userInfo = await storage.get('userInfo', { dataPath: dataPath });
+          webDavClient = await createWebDavClient(userInfo);
+          if (url == '/') {
+            result = await webDavClient.getDirectoryContents(userInfo.remotePath, { deep: 0, filterSelf: false });
+            //  let root = result.shift()
+            // root.children = result
+            // result =  [root]
+          } else {
+            result = await webDavClient.getDirectoryContents(url, { deep: 1 });
+          }
+        }else{//登录失败
+          result = '密码错误，登录失败'
+        }
+      }
+      console.log(Object.keys(e))
     }
 
     event.returnValue = result
@@ -115,10 +168,12 @@ module.exports = () => {
   }
 
 
-  ipcMain.on('login_sucess', login_sucess);
-  ipcMain.on('propfind_child', propfind_child);
-  ipcMain.on('storage_add_check_path', storage_add_check_path);
-  ipcMain.on('storage_fetch_check_path', storage_fetch_check_path);
-  ipcMain.on('storage_remove_check_path', storage_remove_check_path);
-  ipcMain.on('storage_update_check_path', storage_update_check_path);
+
+    ipcMain.on('login_sucess', login_sucess);
+    ipcMain.on('propfind_child', propfind_child);
+    ipcMain.on('storage_add_check_path', storage_add_check_path);
+    ipcMain.on('storage_fetch_check_path', storage_fetch_check_path);
+    ipcMain.on('storage_remove_check_path', storage_remove_check_path);
+    ipcMain.on('storage_update_check_path', storage_update_check_path);
+
 };
