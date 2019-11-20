@@ -6,7 +6,7 @@ const  request = require("request");
 const util = require('util')
 let checkingFiles = require('./checkingFiles')
 
-
+let checkings = {}//检查对象
 
 let dataPath = filePath.join(__dirname, 'data');
 storage.setDataPath(dataPath);
@@ -26,16 +26,6 @@ let refreshToken =  async function(){
   let userInfo = await storage.get('userInfo', { dataPath: dataPath });
   let post = util.promisify(request.post)
 
-  // let result =  await post({
-  //   //url: 'http://localhost:8080/api/v1/account',//userInfo.remoteUrl + '/api/v1/account',
-  //   method: 'POST',
-  //   //hostname:'localhost:8080',
-  //   protocol:'http:',
-  //   host: 'localhost',
-  //   port:8080,
-  //   path: '/api/v1/account',
-  //   data: {username:userInfo.username,password:userInfo.password},
-  // });
   let result = await post('http://localhost:8080/api/v1/account',{json:true,body:{username:userInfo.username,password:userInfo.password}})
 
   //console.log('重新获得的登录信息',Object.keys(result.body.data))
@@ -49,29 +39,37 @@ let refreshToken =  async function(){
 
 module.exports = () => {
   //登录成功
-  let login_sucess = async (event, args) => {
-    //console.log(username,password,baseurl,token) // prints "ping"
-    console.log(args);
-    let url = new URL(args.baseurl);
-    let userInfo = await storage.get('userInfo', { dataPath: dataPath });
-    if(Object.keys(userInfo).length == 0){//还没有登录，是空的
-      userInfo = {
-        ...args,
-        remoteUrl: url.origin,
-        remotePath: '/api/v1/webdav2/',
-        sync:[]
-      };
-    }else {
-      userInfo = {
-        ...userInfo,
-        ...args,
-        remoteUrl: url.origin
-      };
-    }
+  let login = async (event, {username,password,baseurl}) => {
+    console.log(username,password,baseurl) // prints "ping"
+    //console.log(args);
 
-    await storage.set('userInfo', userInfo, { dataPath: dataPath });
-    event.returnValue = '操作成功';
-    event.reply('userInfoWrited', userInfo);
+    let post = util.promisify(request.post)
+
+    let result = await post(baseurl,{json:true,body:{username,password}})
+
+    if(result.body.status) {
+
+      let url = new URL(baseurl);
+      let userInfo = await storage.get('userInfo', { dataPath: dataPath });
+      if (Object.keys(userInfo).length == 0) {//还没有登录，是空的
+        userInfo = {
+          username, password, baseurl,
+          remoteUrl: url.origin,
+          remotePath: '/api/v1/webdav2/',
+          sync: []
+        };
+      } else {
+        userInfo = {
+          ...userInfo,
+          username, password, baseurl,
+          remoteUrl: url.origin
+        };
+      }
+
+      await storage.set('userInfo', userInfo, { dataPath: dataPath });
+    }
+    event.returnValue = result.body;
+    event.reply('userInfoWrited',  result.body);
   };
   //查找远程文件
   let propfind_child = async (event, url) => {
@@ -125,11 +123,16 @@ module.exports = () => {
        ]
     };
     await storage.set('userInfo', userInfo, { dataPath: dataPath });
+    checkings[remotePath] = new checkingFiles()
     event.returnValue = userInfo.sync
   }
   //删除同步目录到本地数据中
   let storage_remove_check_path = async (event, {localPath,remotePath}) => {
     console.log('storage_remove_check_path',{localPath,remotePath})
+    //先停止运行，再删除对应对象
+    checkings[remotePath].unwatch()
+    delete checkings[remotePath]
+
     let userInfo = await storage.get('userInfo', { dataPath: dataPath });
     let sync = userInfo.sync.filter((item)=>{
       return item.localPath != localPath && item.remotePath != remotePath
@@ -156,20 +159,30 @@ module.exports = () => {
        sync
     };
     await storage.set('userInfo', userInfo, { dataPath: dataPath });
-    if (check == true){
-      checkingFiles.init(remotePath,localPath)
+    if (check == true){//启动监控同步
+      checkings[remotePath].init(remotePath,localPath)
+    }else{//停止监控同步
+      checkings[remotePath].unwatch()
     }
     event.returnValue = userInfo.sync
   }
   //获取本地数据中的同步文件夹信息
   let storage_fetch_check_path = async (event,args)=>{
     let userInfo = await storage.get('userInfo', { dataPath: dataPath });
+    for (let sync of userInfo.sync){
+      if(!checkings.hasOwnProperty(sync.remotePath)) {
+        checkings[sync.remotePath] = new checkingFiles()
+        if (sync.check) {//默认已经开启
+          checkings[sync.remotePath].init(sync.remotePath,sync.localPath)
+        }
+      }
+    }
     event.returnValue =  userInfo.sync
   }
 
 
 
-    ipcMain.on('login_sucess', login_sucess);
+    ipcMain.on('login', login);
     ipcMain.on('propfind_child', propfind_child);
     ipcMain.on('storage_add_check_path', storage_add_check_path);
     ipcMain.on('storage_fetch_check_path', storage_fetch_check_path);

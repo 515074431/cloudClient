@@ -11,6 +11,11 @@ export default {
         { path: '/userlogin', component: './UserLogin' },
       ],
     },
+    {
+      name: '退出页',
+      path: '/userlogout',
+      component: './UserLogin/logout'
+    },
     // app
     {
       path: '/',
@@ -29,7 +34,7 @@ export default {
         },
         {
           path: '/',
-          component: '../pages/index',
+          component: './ListTableList',
         },
       ],
     },

@@ -45,12 +45,7 @@ class TableList extends Component {
     selectedRows: [],
     formValues: {},
     stepFormValues: {},
-    list: [
-      { name: 'haha' },
-      { name: 'bbbbb' },
-      { name: 'cccc' },
-      { name: 'ddddd' },
-    ],
+    list: [],
   };
 
 

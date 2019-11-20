@@ -44,43 +44,15 @@ class SiderDemo extends React.Component {
               <Menu.Item key="1">
                 <Link to="/listtablelist" >
                   <Icon type="pie-chart" />
-                  <span>列表 1</span>
+                  <span>文件</span>
                 </Link>
               </Menu.Item>
-              <Menu.Item key="2">
-                <Link to="/accountsettings">
-                  <Icon type="desktop" />
-                  <span>设置 2</span>
-                </Link>
-              </Menu.Item>
-              <SubMenu
-                key="sub1"
-                title={
-                  <span>
-                  <Icon type="user" />
-                  <span>User</span>
-                </span>
-                }
-              >
-                <Menu.Item key="3">Tom</Menu.Item>
-                <Menu.Item key="4">Bill</Menu.Item>
-                <Menu.Item key="5">Alex</Menu.Item>
-              </SubMenu>
-              <SubMenu
-                key="sub2"
-                title={
-                  <span>
-                  <Icon type="team" />
-                  <span>Team</span>
-                </span>
-                }
-              >
-                <Menu.Item key="6">Team 1</Menu.Item>
-                <Menu.Item key="8">Team 2</Menu.Item>
-              </SubMenu>
-              <Menu.Item key="9" onClick={()=>dispatch({type:'userLogin/logout'})} >
+
+              <Menu.Item key="9"  >
+                <Link to="/userlogout" >
                 <Icon type="file" />
                 <span>退出</span>
+                </Link>
               </Menu.Item>
             </Menu>
           </Header>
@@ -105,7 +77,7 @@ class SiderDemo extends React.Component {
               textAlign: 'center',
             }}
           >
-            Ant Design ©2018 Created by Ant UED
+            励铖建筑云盘 ©2018 Created by 励铖软件
           </Footer>
       </Layout>
     );

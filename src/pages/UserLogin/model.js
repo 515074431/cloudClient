@@ -2,8 +2,6 @@ import { routerRedux } from 'dva/router';
 import { stringify } from 'qs';
 import { fakeAccountLogin, getFakeCaptcha } from './service';
 import { getPageQuery, setAuthority,getAuthority } from './utils/utils';
-//在渲染器进程 (网页) 中。
-const ipcRenderer = window.require('electron').ipcRenderer;
 
 const Model = {
   namespace: 'userLogin',
@@ -14,13 +12,6 @@ const Model = {
     *login({ payload }, { call, put }) {
       const response = yield call(fakeAccountLogin, payload);
       console.log('-----response----',response)
-      if(response.status){//登录成功
-        console.log(ipcRenderer.sendSync('login_sucess', {...payload,...response.data})) // prints "pong"
-
-        ipcRenderer.on('userInfoWrited', (event, arg) => {
-          console.log('返回的信息',arg)
-        })
-      }
 
       if (response.status) {
         yield put({
@@ -42,6 +33,10 @@ const Model = {
 
             if (redirect.match(/^\/.*#/)) {
               redirect = redirect.substr(redirect.indexOf('#') + 1);
+            }
+            console.log(redirect)
+            if(redirect == '/userlogout'){
+              redirect = '/'
             }
           } else {
             window.location.href = redirect;

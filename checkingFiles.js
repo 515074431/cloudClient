@@ -6,29 +6,31 @@ const lodash = require('lodash');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const hash = require('./hash')
-const checkingFiles = {
-  remotePath: '/',//线上地址
-  localPath: __dirname,//本地地址
-  filesDataName:'',//本地文件信息存储名称加密后半部分
-  userInfo: null,//用户信息
-  webDavClient: null,//webdav客户端
-  filesData: [],//本地的文件信息数据
-  change: false,//远程和本地比较是否有变化
-  watchFiles: [],//监控变动的文件信息
-  watchFilesExclude: [],//监控变动的文件信息需要排除的文件
+class  checkingFiles {
+  remotePath= '/';//线上地址
+  localPath= __dirname;//本地地址
+  filesDataName='';//本地文件信息存储名称加密后半部分
+  userInfo= null;//用户信息
+  webDavClient= null;//webdav客户端
+  filesData= [];//本地的文件信息数据
+  change= false;//远程和本地比较是否有变化
+  watchFiles= [];//监控变动的文件信息
+  watchFilesExclude= [];//监控变动的文件信息需要排除的文件
+  watcher=null;//监控本地文件变化
+  checking=false;//是否检查
   /**
    * 创建webdav客户端
    * @param userInfo
    * @returns {Promise<Object|ClientInterface|*>}
    */
-  createWebDavClient: async function(userInfo) {
+   async createWebDavClient(userInfo){
     return webDav.createClient(userInfo.remoteUrl, {
       token: {
         token_type: 'Bearer',
         access_token: userInfo.token,
       },
     });
-  },
+  }
 
   /**
    * 检查目录
@@ -36,7 +38,7 @@ const checkingFiles = {
    * @returns {Promise<void>}
    * @constructor
    */
-  remote2local: async function(checkDir) {
+   async remote2local(checkDir) {
     console.log('----------------------检查目录开始-------------------------------');
     console.log('目录：', checkDir);
     let currentDir = await this.webDavClient.getDirectoryContents(checkDir, { deep: 0, filterSelf: false });
@@ -131,12 +133,12 @@ const checkingFiles = {
       }
     }
     console.log('----------------------检查目录结束--------------------------');
-  },
+  }
   /**
    * 递归的删除文件夹
    * @returns {Promise<void>}
    */
-  rmFolder: function(path) {
+  rmFolder (path) {
     if (fs.existsSync(path)) {
 
       let stat = fs.statSync(path);
@@ -156,24 +158,24 @@ const checkingFiles = {
         this.watchFilesExclude.push({ path: path, action: 'unlinkDir' });
       }
     }
-  },
+  }
   /**
    * 转换路径 将远程路径转换成本地路径
    * @param remoteUrl 线上地址
    * @returns {string}
    */
-  pathRemote2local: function(remoteUrl) {//转换远程路径为本地路径
+  pathRemote2local (remoteUrl) {//转换远程路径为本地路径
     return filePath.join(this.localPath, remoteUrl.substring(this.remotePath.length)).replace('/', '\\');
-  },
+  }
   /**
    * 转换路径 将本地路径转换成远程路径
    * @param localPath  本地路径
    * @returns {string}
    */
-  pathLocal2remote: function(localPath) {
+  pathLocal2remote (localPath) {
     let str = filePath.join(this.remotePath, localPath.substring(this.localPath.length));
     return str.replace(/\\/g, '/');
-  },
+  }
 
   /**
    * 下载 从远程到本地
@@ -181,7 +183,7 @@ const checkingFiles = {
    * @param change   布尔 是否是更改
    * @returns {Promise<void>}
    */
-  wGetRemote2local: async function(remoteFile, change = false) {
+   async wGetRemote2local(remoteFile, change = false) {
     let localPath = this.pathRemote2local(remoteFile.filename);
     let action;
     if (remoteFile.type == 'directory') {
@@ -198,7 +200,7 @@ const checkingFiles = {
       path: localPath,
       action: action,
     });
-  },
+  }
 
 
   /**
@@ -206,7 +208,7 @@ const checkingFiles = {
    * @param remotePath
    * @returns {Promise<Array<Stat>>}
    */
-  batchDownLoad: async function(remotePath) {
+   async batchDownLoad(remotePath) {
     let filesData = await this.webDavClient.getDirectoryContents(remotePath, {
       deep: 'infinity',
       filterSelf: false,
@@ -218,12 +220,12 @@ const checkingFiles = {
       await this.wGetRemote2local(fileData);
     }
     return filesData;
-  },
+  }
   /**
    * 本地到远程 同步数据
    * @returns {Promise<void>}
    */
-  local2remote: async function() {
+   async local2remote() {
     console.log('----local2remote  start-----')
     let watchFilesLength = this.watchFiles.length
     for (let i = 0; i < watchFilesLength; i++) {
@@ -264,7 +266,7 @@ const checkingFiles = {
         case 'add'://上传文件
           //await add(handle.stats.path,handle.stats);
           if (fs.existsSync(handle.stats.path)) {//当文件存在时才上传，因为有时候新建后修改了文件名还是有创建的记录，但是没有了原始文件
-            await this.webDavClient.putFileContents(remotePath, handle.stats.path);
+            await fs.createReadStream(handle.stats.path) .pipe(this.webDavClient.createWriteStream(remotePath ));
             //修改本地同步数据
 
             let fileData = await this.webDavClient.stat(remotePath);//远程文件数据信息
@@ -290,7 +292,8 @@ const checkingFiles = {
           break;
         case 'change'://修改内容
           //await change(handle.stats.path,handle.stats);
-          await this.webDavClient.putFileContents(remotePath, handle.stats.path);
+          await fs.createReadStream(handle.stats.path)
+            .pipe(this.webDavClient.createWriteStream(remotePath ));
           //修改本地同步数据
           let changePathIndex = lodash.findIndex(this.filesData, { filename: remotePath });
           console.log('288---remotePath',remotePath)
@@ -350,10 +353,21 @@ const checkingFiles = {
 
     }
     console.log('-----local2remote stop--------')
-  },
-  watch: function(watchDir) {
-    const watcher = chokidar.watch(watchDir);
-    watcher
+  }
+  /**
+   * 停止监控
+   */
+  unwatch(){
+    this.checking = false
+    this.watcher.close()
+  }
+  /**
+   * 开始监控
+   * @param watchDir
+   */
+  watch (watchDir) {
+    this.watcher = chokidar.watch(watchDir);
+    this.watcher
       .on('unlink', path => {
         console.log(`File ${path} has been removed`);
         this.watchFiles.push({ action: 'unlink', stats: { path } });
@@ -385,14 +399,14 @@ const checkingFiles = {
         this.watchFilesExclude = [];
 
       });
-  },
+  }
   /**
    * 从远程下载到本地
    * @param remotePath  远程路径
    * @param localPath  本地路径
    * @returns {Promise<void>}
    */
-  init: async function(remotePath, localPath) {
+   async init(remotePath, localPath) {
     this.remotePath = remotePath;
     this.localPath = localPath;
     this.filesDataName = 'filesData-' + hash.md5(remotePath)
@@ -432,10 +446,10 @@ const checkingFiles = {
 
     //开始监控启动
     this.watch(localPath);
+    this.checking = true;
 
     // console.log('^^^^^---this.watchFiles----^^^^^',this.watchFiles)
     // console.log('^^^^----this.watchFilesExclude----^^^^',this.watchFilesExclude)
-    let same = true;
     do {
       console.log('^^^^^---this.watchFiles----^^^^^',this.watchFiles)
       console.log('^^^^----this.watchFilesExclude----^^^^',this.watchFilesExclude)
@@ -456,11 +470,11 @@ const checkingFiles = {
       await sleep(10000);
       console.log('过10秒再打印');
       //break;
-    } while (same);
+    } while (this.checking);
 
-// let rootDir = ''
 
-  },
+
+  }
 };
 module.exports = checkingFiles;
 
