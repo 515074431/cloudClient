@@ -26,7 +26,7 @@ let refreshToken =  async function(){
   let userInfo = await storage.get('userInfo', { dataPath: dataPath });
   let post = util.promisify(request.post)
 
-  let result = await post('http://localhost:8080/api/v1/account',{json:true,body:{username:userInfo.username,password:userInfo.password}})
+  let result = await post(userInfo.baseurl,{json:true,body:{username:userInfo.username,password:userInfo.password}})
 
   //console.log('重新获得的登录信息',Object.keys(result.body.data))
   if(result.body.status){

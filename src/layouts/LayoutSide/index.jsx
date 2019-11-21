@@ -5,6 +5,8 @@ import Link from 'umi/link';
 import { getAuthority } from '@/pages/UserLogin/utils/utils';
 import lodash from 'lodash'
 import router from 'umi/router';
+import styles from './index.less';
+import logo from '../../assets/logo.png';
 const { Header, Content, Footer, Sider } = Layout;
 const { SubMenu } = Menu;
 
@@ -88,7 +90,20 @@ class SiderDemo extends React.Component {
 export default (props) =>{
 
   if (props.location.pathname === '/userlogin') {
-    return <div>{ props.children }</div>
+    return <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.top}>
+            <div className={styles.header}>
+              <Link to="/">
+                <img alt="logo" className={styles.logo} src={logo} />
+                <span className={styles.title}>励铖建筑云盘</span>
+              </Link>
+            </div>
+            <div className={styles.desc}>建筑云盘专业解决方案</div>
+          </div>
+          { props.children }
+        </div>
+      </div>
   }
   console.log(props.route)
   console.log(props)

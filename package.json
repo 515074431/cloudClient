@@ -2,7 +2,7 @@
   "name": "licheng-cloud-client",
   "version": "1.0.0",
   "private": true,
-  "main": "main.js",
+  "main": "main/main.js",
   "scripts": {
     "estart": "electron .",
     "pack": "electron-builder --dir",
@@ -57,13 +57,13 @@
   },
   "build": {
     "asar": false,
-    "productName": "lichengCloudClient",
+    "productName": "励铖建筑云盘",
     "appId": "com.lichengsoft.clound",
     "extends": null,
     "files": [
       "dist",
-      "main.js",
-      "package.json"
+      "main",
+      "src/assets"
     ],
     "mac": {
       "target": [

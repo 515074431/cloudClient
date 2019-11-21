@@ -49,7 +49,7 @@ export default {
         dynamicImport: {
           webpackChunkName: true,
         },
-        title: 'licheng-cloud-client',
+        title: '励铖建筑云盘',
         dll: false,
         routes: {
           exclude: [

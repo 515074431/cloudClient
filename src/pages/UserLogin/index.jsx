@@ -99,7 +99,7 @@ class UserLogin extends Component {
               )}
             <BaseUrl
               name="baseurl"
-              placeholder={`${formatMessage({ id: 'userlogin.login.baseurl' })}: http://localhost:8080`}
+              placeholder={`${formatMessage({ id: 'userlogin.login.baseurl' })}: http://lichengsoft.com`}
               rules={[
                 {
                   required: true,
@@ -111,7 +111,7 @@ class UserLogin extends Component {
               name="username"
               placeholder={`${formatMessage({
                 id: 'userlogin.login.username',
-              })}: admin or user`}
+              })}: `}
               rules={[
                 {
                   required: true,
@@ -125,7 +125,7 @@ class UserLogin extends Component {
               name="password"
               placeholder={`${formatMessage({
                 id: 'userlogin.login.password',
-              })}: ant.design`}
+              })}: `}
               rules={[
                 {
                   required: true,
@@ -144,14 +144,7 @@ class UserLogin extends Component {
             <Checkbox checked={autoLogin} onChange={this.changeAutoLogin}>
               <FormattedMessage id="userlogin.login.remember-me" />
             </Checkbox>
-            <a
-              style={{
-                float: 'right',
-              }}
-              href=""
-            >
-              <FormattedMessage id="userlogin.login.forgot-password" />
-            </a>
+
           </div>
           <Submit loading={submitting}>
             <FormattedMessage id="userlogin.login.login" />
