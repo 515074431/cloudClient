@@ -78,7 +78,8 @@ const Model = {
   },
   reducers: {
     changeLoginStatus(state, { payload }) {
-      setAuthority(payload.data.currentAuthority);
+      console.log('payload',payload)
+      setAuthority(payload.data.antd_pro_authority);
       return { ...state, status: payload.status }
     }
   },

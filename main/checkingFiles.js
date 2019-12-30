@@ -42,6 +42,7 @@ class  checkingFiles {
     console.log('----------------------检查目录开始-------------------------------');
     console.log('目录：', checkDir);
     let currentDir = await this.webDavClient.getDirectoryContents(checkDir, { deep: 0, filterSelf: false });
+    console.log('请求信息',currentDir)
     currentDir = currentDir[0];
     const oldDirIndex = lodash.findIndex(this.filesData, { filename: currentDir.filename });//原文件夹索引
     if (oldDirIndex == -1) {//文件夹不存在  直接创建
@@ -359,7 +360,9 @@ class  checkingFiles {
    */
   unwatch(){
     this.checking = false
-    this.watcher.close()
+    if(this.watcher != null) {
+      this.watcher.close()
+    }
   }
   /**
    * 开始监控

@@ -45,7 +45,7 @@ module.exports = () => {
 
     let post = util.promisify(request.post)
 
-    let result = await post(baseurl,{json:true,body:{username,password}})
+    let result = await post(baseurl+'/api/v1/login',{json:true,body:{account:username,password}})
 
     if(result.body.status) {
 
@@ -54,13 +54,15 @@ module.exports = () => {
       if (Object.keys(userInfo).length == 0) {//还没有登录，是空的
         userInfo = {
           username, password, baseurl,
+          token:result.body.data.token,
           remoteUrl: url.origin,
-          remotePath: '/api/v1/webdav2/',
+          remotePath: '/api/v1/dav/data/'+ username + '/',
           sync: []
         };
       } else {
         userInfo = {
           ...userInfo,
+          token:result.body.data.token,
           username, password, baseurl,
           remoteUrl: url.origin
         };
@@ -75,10 +77,15 @@ module.exports = () => {
   let propfind_child = async (event, url) => {
     console.log('URL:',url)
     let userInfo = await storage.get('userInfo', { dataPath: dataPath });
+    if(Object.keys(userInfo).length == 0 ){//没有登录信息
+      event.returnValue = {message:'没有登录信息'}
+      return
+    }
     let reqestPath = url == '/'? userInfo.remotePath : url
     let webDavClient = await createWebDavClient(userInfo);
     let result
     try {
+      console.log(userInfo)
       if (url == '/') {
         result = await webDavClient.getDirectoryContents(userInfo.remotePath, { deep: 0, filterSelf: false });
         //  let root = result.shift()
@@ -169,6 +176,10 @@ module.exports = () => {
   //获取本地数据中的同步文件夹信息
   let storage_fetch_check_path = async (event,args)=>{
     let userInfo = await storage.get('userInfo', { dataPath: dataPath });
+    if(Object.keys(userInfo).length == 0 || !userInfo.hasOwnProperty('sync')){
+      event.returnValue = {message:'没有登录,需要重新登录'}
+      return
+    }
     for (let sync of userInfo.sync){
       if(!checkings.hasOwnProperty(sync.remotePath)) {
         checkings[sync.remotePath] = new checkingFiles()
